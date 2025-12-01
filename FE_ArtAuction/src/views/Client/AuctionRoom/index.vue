@@ -1,0 +1,1667 @@
+<template>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 d-flex">
+        <div class="card p-0">
+          <div class="card-body p-0">
+            <!-- Đặt vào phần LIVESTREAM Ở ĐÂY của cột trái -->
+
+            <div v-if="error" class="">
+              <p>{{ error }}</p>
+            </div>
+            <div v-else class="" ref="chatRoomElement" style="height: 91vh; width: 100%;">
+              <!-- <p v-if="loading">Loading live stream...</p> -->
+              <!-- <div v-else id="live-stream-container" style="height: 80vh; width: 100%; background-color: #000;"></div> -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 d-flex ps-0">
+        <div class="card p-0">
+          <div class="card-body ps-1 pe-0">
+            <div class="tabs-wrapper d-flex gap-0">
+              <div class="tab-content flex-grow-1 content-box" id="auctionTabsContent">
+
+                <!-- Tab 1: Bidding -->
+                <div class="tab-pane fade show active" id="bidding" role="tabpanel" aria-labelledby="bidding-tab">
+                  <div class="row px-2">
+                    <!-- time-start-current -->
+                    <div class="col-lg-12 mb-3 mt-3 mt-lg-0">
+                      <div class="card border border-2 border-success shadow-sm p-0">
+                        <div class="card-body py-2">
+                          <div class="alert alert-success mb-2 py-2 text-center" role="alert">
+                            <strong>{{ roomID }}</strong>
+
+                          </div>
+
+                          <div class="row text-center">
+                            <div class="col-4 p-0">
+                              <div class="border-end">
+                                <p class="m-1">Time</p>
+                                <p class="fw-bold text-danger m-0">{{ countdownDisplay }}</p>
+                              </div>
+                            </div>
+                            <div class="col-4 p-0">
+                              <div class="border-end">
+                                <p class="m-1">Start</p>
+                                <p class="fw-bold  m-0">{{ formatUSD(artworkSession.startingPrice) }}</p>
+                              </div>
+                            </div>
+                            <div class="col-4 p-0">
+                              <p class="m-1">Current</p>
+                              <p class="fw-bold text-success m-0">{{ formatUSD(artworkSession.currentPrice) }}</p>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+                    <!-- user-hight bid -->
+                    <div class="col-lg-12 mb-3">
+                      <div class="card p-0">
+                        <div class="card-body ">
+                          <div class="d-flex justify-content-between ">
+                            <p class="m-0">Username</p>
+                            <p class="m-0">Hight</p>
+                          </div>
+                          <hr class="my-2 fw-bold">
+                          <div class="d-flex justify-content-between ">
+                            <p class="m-0">{{ artworkSession.winnerId }}</p>
+                            <p class="m-0 fw-bold text-success">{{ formatUSD(artworkSession.currentPrice) }}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- đặt giá nhanh -->
+                    <div v-for="(value, index) in quickBidButtons" :key="index" :class="index < 3 ? 'col-4 mb-2' : 'col-4'">
+                      <div class="card p-0 quick-bid-btn" :class="{ 'quick-bid-active': selectedQuickBid === value }" @click="setQuickBid(value)">
+                        <div class="card-body py-2 text-center">
+                          <p class="m-0">{{ formatUSD(value) }}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- đặt giá -->
+                    <div class="col-lg-12 mt-3">
+                      <div class="input-group border border-2 border-success rounded-3 shadow-sm">
+                        <input v-model="bidAmount" type="number" class="form-control"
+                          :placeholder="'minimum is ' + formatUSD(artworkSession.bidStep)" aria-label="Bid Amount"
+                          aria-describedby="button-bid">
+                        <button @click="datGia" class="btn btn-success " :disabled="isPlacingBid">
+                          <i v-if="isPlacingBid" class="fas fa-spinner fa-spin me-2"></i>
+                          <i v-else class="fas fa-gavel me-2"></i>
+                          {{ isPlacingBid ? 'Đang đặt giá...' : 'Place' }}
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- detail-artwork -->
+                    <div class="col-lg-12 mt-3">
+                      <div class="card bg-transparent border border-2 border-success shadow-sm p-0"
+                        data-bs-toggle="modal" data-bs-target="#exampleModal">
+                        <div class="card-body d-flex justify-content-center align-items-center gap-2 p-2">
+                          <img
+                            :src="artworkSession.imageUrl || 'https://i.pinimg.com/736x/8b/a0/d6/8ba0d6ee7608f8caa427a819de41638a.jpg'"
+                            class="img-thumbnail" style="max-height: 170px;" alt="">
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Tab 2: Chat -->
+                <div class="tab-pane fade chat-tab-pane" id="chat" role="tabpanel" aria-labelledby="chat-tab">
+                  <div class="row h-100 m-0">
+                    <div class="col-lg-12 h-100 p-0">
+                      <div class="card p-0 border border-2 border-success shadow-sm h-100 d-flex flex-column">
+                        <div class="card-header bg-success text-white py-3">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                              <i class="fa-solid fa-comments fa-lg"></i>
+                              <h5 class="mb-0">Live Chat</h5>
+                            </div>
+                            <div class="d-flex gap-2">
+                              <span class="badge bg-white text-success">
+                                <i class="fa-solid fa-users me-1"></i>{{ messages.length }} messages
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="card-body chat-content p-3 flex-grow-1" ref="chatMessages"
+                          style="overflow-y: auto; background-color: #f8f9fa; display: flex; flex-direction: column;">
+                          <div style="flex: 1; min-height: 0;"></div>
+                          <template v-for="(m, idx) in messages" :key="idx">
+                            <!-- Message from others -->
+                            <div v-if="!m.mine" class="mb-3">
+                              <div class="d-flex align-items-start">
+                                <div
+                                  class="avatar-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2"
+                                  style="width: 36px; height: 36px; min-width: 36px; border-radius: 50%; font-size: 14px; font-weight: bold;">
+                                  {{ (m.senderName || 'A').charAt(0).toUpperCase() }}
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="d-flex align-items-center gap-2 mb-1">
+                                    <small class="fw-semibold text-dark">{{ m.senderName || 'Admin' }}</small>
+                                    <button
+                                      v-if="isAdmin && m.senderId && m.senderId !== adminId && m.senderId !== adminEmail"
+                                      class="btn btn-link btn-sm ms-2 p-0 text-decoration-none"
+                                      @click="replyToUser(m.senderId)" title="Reply this user">
+                                      <i class="fa-solid fa-reply"></i> Reply
+                                    </button>
+                                  </div>
+                                  <div class="d-flex gap-2 align-items-end justify-content-start">
+                                    <div class="chat-bubble-left">
+                                      {{ m.text }}
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ m.time }}</small>
+
+                                  </div>
+
+
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- My message -->
+                            <div v-else class="mb-3">
+                              <div class="d-flex align-items-start justify-content-end">
+                                <div class="flex-grow-1 text-end">
+                                  <div class="d-flex align-items-center gap-2 justify-content-end mb-1">
+                                    <small class="fw-semibold text-dark">{{ m.senderName || 'You' }}</small>
+                                  </div>
+
+                                  <div class="d-flex gap-2 align-items-end justify-content-end">
+                                    <small class="text-muted" style="font-size: 0.75rem;">{{ m.time }}</small>
+                                    <div class="chat-bubble-right">
+                                      {{ m.text }}
+                                    </div>
+                                  </div>
+
+                                </div>
+                                <div
+                                  class="avatar-circle bg-success text-white d-flex align-items-center justify-content-center ms-2"
+                                  style="width: 36px; height: 36px; min-width: 36px; border-radius: 50%; font-size: 14px; font-weight: bold;">
+                                  {{ (m.senderName || 'Y').charAt(0).toUpperCase() }}
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+
+                          <!-- Admin controls - di chuyển xuống dưới để dễ thao tác -->
+                          <div v-if="isAdmin" class="admin-controls mb-3 p-2 bg-light rounded">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                              <label class="form-label mb-0 small">Reply to:</label>
+                              <select v-model="selectedUserId" class="form-select form-select-sm" style="width: auto;">
+                                <option value="">Broadcast to All</option>
+                                <option v-for="user in uniqueUsers" :key="user.id" :value="user.id">
+                                  {{ user.name }} ({{ user.role }})
+                                </option>
+                              </select>
+                              <button v-if="selectedUserId" class="btn btn-sm btn-outline-secondary"
+                                @click="selectedUserId = null" title="Switch to broadcast">Broadcast</button>
+                            </div>
+                            <div class="small text-muted">
+                              Target:
+                              {{ selectedUserId ? getUserName(selectedUserId) + ' (direct)' : 'All users (broadcast)' }}
+                            </div>
+                          </div>
+
+                        </div>
+                        <div class="card-footer bg-white border-top p-3">
+                          <div class="input-group">
+                            <input v-model="text" @keyup.enter="sendMsg" type="text" class="form-control "
+                              :placeholder="isAdmin ? (selectedUserId ? `Reply to ${getUserName(selectedUserId)}` : 'Broadcast to all users...') : 'Type your message...'" />
+                            <button @click="sendMsg" class="btn btn-success" :disabled="!text || !text.trim()">
+                              <i class="fa-solid fa-paper-plane me-2"></i>Send
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Tabs Navigation (Right Side) -->
+              <div class="tabs-sidebar px-3">
+                <ul class="nav nav-tabs flex-column" id="auctionTabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="bidding-tab" data-bs-toggle="tab" data-bs-target="#bidding"
+                      type="button" role="tab" aria-controls="bidding" aria-selected="true" title="Đặt giá">
+                      <i class="fa-solid fa-gavel"></i>
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button"
+                      role="tab" aria-controls="chat" aria-selected="false" title="Chat">
+                      <i class="fa-solid fa-comments"></i>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <!-- End Tabs Navigation -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+
+  </div>
+  <!-- Modal -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5 fw-bold text-success" id="exampleModalLabel">Artwork Information</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-lg-7">
+              <img :src="artworkSession.imageUrl" class="img-thumbnail" style="max-height: 450px;" alt="">
+                <!-- <img
+                :src="artworkSession.imageUrl || 'https://i.pinimg.com/736x/8b/a0/d6/8ba0d6ee7608f8caa427a819de41638a.jpg'"
+                class="img-thumbnail" alt=""> -->
+              <div class="alert alert-success mt-3 py-2" role="alert">
+                <div class="d-flex justify-content-between align-items-center">
+                  <p class="m-0">Starting Price</p>
+                  <p class="m-0 fw-bold">80 USD</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5 d-flex flex-column gap-3">
+              <h4 class="fw-bold text-success m-0">Serenity Twilight Studio</h4>
+              <div class="d-flex justify-content-between align-items-center">
+                <p class="m-0 text-success fw-bold">Artist</p>
+                <p class="m-0">Aki Ren</p>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center">
+                <p class="m-0 text-success fw-bold">Category</p>
+                <p class="m-0">Digital Illustration</p>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <p class="m-0 text-success fw-bold">Year Created</p>
+                <p class="m-0">2024</p>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <p class="m-0 text-success fw-bold">Description</p>
+                <p class="m-0">The artwork portrays a tranquil room with large glass windows overlooking a forest at
+                  sunset. Shades of purple and blue fill the sky, creating a dreamy and peaceful atmosphere. Inside, a
+                  cozy workspace with a desk, bookshelf, and small chair sits near the window, surrounded by lush potted
+                  plants. The soft color palette carries a fantasy touch, expressing the harmony between nature and
+                  personal space.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div> -->
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import axios from 'axios';
+import ChatSocket from '../../../socket'
+import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
+// const auctionId = ref('auction-001');
+
+export default {
+  name: 'AuctionRoom',
+  inheritAttrs: false,
+  // props: ["id"],
+  data() {
+    return {
+      // roomId: "support:auction-001-userA",
+      roomID: this.$route.params.id,
+
+      detail_auction: {},
+      artworkSession: {}, // Thông tin artwork từ session
+
+      roomStatusInterval: null, // Interval để check trạng thái phòng
+      refreshInterval: 5000, // Thời gian refresh (ms) - có thể chỉnh: 3000 = 3 giây
+
+      // === COUNTDOWN CONFIG ===
+      COUNTDOWN_DURATION_MINUTES: 3, // Thời gian countdown ban đầu (phút) - Có thể đổi: 15, 20, 30, v.v.
+      TIME_EXTENSION_THRESHOLD_MINUTES: 2, // Ngưỡng thời gian để kéo dài (phút) - Nếu còn dưới giá trị này thì kéo dài
+      TIME_EXTENSION_AMOUNT_MINUTES: 1, // Thời gian kéo dài mỗi lần (phút)
+
+      role: "audience", // or "host"
+      loading: false,
+      error: null,
+      inviteLink: "",
+
+
+      client: null,
+      connected: false,
+      messages: [],
+      text: "",
+
+
+      // === USER INFO ===
+      currentUserId: null,
+      currentUserEmail: null,
+      currentUsername: null,
+
+      joined: false,
+      snapshot: null,
+
+      // === ADMIN CONFIG ===
+      adminId: "U-4019812134200", // Admin ID từ database
+      adminEmail: "connchonam@example.com", // Admin email để nhận diện
+      adminUsername: "john_sins", // Admin username để nhận diện
+
+      // === CHAT STATE ===
+      isAdmin: false, // User hiện tại có phải admin không
+      selectedUserId: null, // User được admin chọn để reply (null = broadcast)
+
+      // === BID STATE ===
+      bidAmount: '', // Giá trị bid người dùng nhập
+      isPlacingBid: false, // Trạng thái đang đặt giá
+      selectedQuickBid: null, // Nút đặt giá nhanh được chọn
+
+      // === COUNTDOWN TIMER ===
+      countdownSeconds: 0, // Số giây còn lại (từ WebSocket)
+      countdownInterval: null, // Interval cho countdown
+      lastBidPrice: 0, // Giá bid cuối cùng để detect bid mới
+      sessionEndTime: null, // Thời gian kết thúc session từ WebSocket
+
+      // === AUCTION WEBSOCKET ===
+      auctionSocket: null,
+      auctionRoomSubscription: null,
+      auctionBidsSubscription: null,
+    }
+  },
+
+  async mounted() {
+    // === INITIALIZATION ===
+    this.initializeUser();
+    this.loadFromCache();
+    await this.loadHistory();
+    this.connectSocket();
+
+    this.loadArtworkBySession();
+
+    // Kết nối WebSocket cho auction countdown
+    this.connectAuctionWebSocket();
+
+    const url = new URL(window.location.href);
+    const params = Object.fromEntries(url.searchParams.entries());
+    // Ép Zego dùng đúng id phòng theo route thay vì random/query
+    this.roomID = this.$route.params.id;
+    this.role = params.role ?? "audience";
+    this.loadAuctionRoom();
+    this.startLiveStream();
+
+    // Bắt đầu check trạng thái phòng liên tục
+    this.startRoomStatusCheck();
+
+    // Scroll to bottom sau khi load xong
+    this.$nextTick(() => {
+      setTimeout(() => {
+        this.scrollToBottom();
+      }, 500);
+    });
+  },
+  beforeUnmount() {
+    // Clear interval check status phòng
+    if (this.roomStatusInterval) {
+      clearInterval(this.roomStatusInterval);
+      this.roomStatusInterval = null;
+    }
+
+    // Clear countdown interval
+    this.stopCountdownInterval();
+
+    // Cleanup socket
+    if (this.socket) {
+      this.socket.deactivate();
+    }
+
+    // Cleanup auction WebSocket
+    this.disconnectAuctionWebSocket();
+  },
+  watch: {
+    // Tự động scroll xuống khi có tin nhắn mới
+    messages: {
+      handler() {
+        this.$nextTick(() => {
+          this.scrollToBottom();
+        });
+      },
+      deep: true
+    },
+
+    // Detect bid mới để hiển thị thông báo
+    'artworkSession.currentPrice': function(newPrice, oldPrice) {
+      // Kiểm tra nếu giá thay đổi và lớn hơn giá cũ (có bid mới)
+      if (newPrice && oldPrice && newPrice > oldPrice) {
+        console.log('🔥 Bid mới! Giá tăng từ', this.formatUSD(oldPrice), 'lên', this.formatUSD(newPrice));
+      }
+    }
+  },
+  methods: {
+
+    // formatVND(number) {
+    //   return new Intl.NumberFormat("vi-VI", { style: "currency", currency: "VND" }).format(number,);
+    // },
+    formatUSD(number) {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(number,);
+    },
+
+    // === COUNTDOWN METHODS ===
+
+    // Khởi tạo countdown từ WebSocket hoặc session data
+    initializeCountdown() {
+      // Ưu tiên dùng endedAt từ session (nếu có)
+      if (this.artworkSession.endedAt) {
+        this.sessionEndTime = new Date(this.artworkSession.endedAt);
+        this.updateCountdownFromEndTime();
+        this.startCountdownInterval();
+        console.log('✅ Countdown initialized from endedAt:', this.countdownSeconds, 'seconds');
+        return;
+      }
+
+      // Fallback: Dùng startTime + durationSeconds
+      const timeField = this.artworkSession.startTime ||
+                        this.artworkSession.start_time ||
+                        this.artworkSession.createdAt ||
+                        this.artworkSession.created_at;
+
+      if (!timeField) {
+        console.warn('⚠️ Không tìm thấy trường startTime hoặc endedAt trong session!');
+        console.log('Session object:', this.artworkSession);
+        // Không khởi tạo countdown, đợi WebSocket
+        return;
+      }
+
+      // Tính endTime từ startTime + durationSeconds
+      const durationSeconds = this.artworkSession.durationSeconds || (this.COUNTDOWN_DURATION_MINUTES * 60);
+      const startTime = new Date(timeField).getTime();
+      const endTime = startTime + (durationSeconds * 1000); // milliseconds
+
+      this.sessionEndTime = new Date(endTime);
+      this.updateCountdownFromEndTime();
+      this.lastBidPrice = this.artworkSession.currentPrice || 0;
+
+      console.log('✅ Countdown initialized:', this.countdownSeconds, 'seconds');
+      console.log('Start time:', new Date(timeField).toLocaleString('vi-VN'));
+      console.log(`End time:`, this.sessionEndTime.toLocaleString('vi-VN'));
+
+      // Bắt đầu countdown interval
+      this.startCountdownInterval();
+    },
+
+    updateCountdownFromEndTime() {
+      if (!this.sessionEndTime) return;
+
+      const now = new Date();
+      const endTime = new Date(this.sessionEndTime);
+      const remainingMs = endTime.getTime() - now.getTime();
+      this.countdownSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+    },
+
+    // Kéo dài countdown - Giờ được xử lý bởi WebSocket từ server
+    extendCountdown() {
+      // Method này giữ lại để tương thích, nhưng logic extend được xử lý bởi WebSocket
+      console.log('⏱️ Countdown extension handled by WebSocket');
+    },
+
+    // Tính lại countdown theo thời gian thực từ server
+    recalculateCountdown() {
+      // Không làm gì cả - để countdown tự đếm ngược
+      // Chỉ extendCountdown() sẽ can thiệp khi còn dưới TIME_EXTENSION_THRESHOLD_MINUTES và có bid mới
+      return;
+    },
+
+    // Bắt đầu countdown interval (cập nhật mỗi giây)
+    startCountdownInterval() {
+      // Clear interval cũ nếu có
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+
+      console.log('🚀 Starting countdown interval...');
+
+      // Tạo interval mới - cập nhật từ sessionEndTime
+      this.countdownInterval = setInterval(() => {
+        if (this.sessionEndTime) {
+          this.updateCountdownFromEndTime();
+
+          // Log mỗi 10 giây để theo dõi
+          if (this.countdownSeconds > 0 && this.countdownSeconds % 10 === 0) {
+            console.log('⏱️ Countdown:', this.countdownSeconds, 'seconds remaining');
+          }
+
+          // Hết thời gian
+          if (this.countdownSeconds <= 0) {
+            this.stopCountdownInterval();
+            console.log('⏰ Hết thời gian đấu giá!');
+            this.$toast?.warning?.('⏰ Hết thời gian đấu giá!');
+          }
+        } else {
+          // Không có sessionEndTime, dừng interval
+          this.stopCountdownInterval();
+        }
+      }, 1000); // Cập nhật mỗi giây
+    },
+
+    // Dừng countdown interval
+    stopCountdownInterval() {
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+        this.countdownInterval = null;
+      }
+    },
+
+    // Gọi API dừng session
+    stopSession() {
+      // Lấy sessionId từ artworkSession
+      const sessionId = this.artworkSession?.sessionId || this.artworkSession?.id;
+
+      if (!sessionId) {
+        console.error('❌ Không tìm thấy sessionId để dừng session');
+        this.$toast?.error?.('Không thể dừng session: Thiếu sessionId');
+        return;
+      }
+
+      console.log('🛑 Đang dừng session:', sessionId);
+
+      axios
+        .post(`http://localhost:8081/api/stream/stop-session/${sessionId}`, {}, {
+          headers: {
+            Authorization: 'Bearer ' + localStorage.getItem("token")
+          }
+        })
+        .then((res) => {
+          console.log('✅ Session đã dừng thành công:', res.data);
+          this.$toast?.success?.('Session đấu giá đã kết thúc!');
+
+          // Có thể redirect về trang kết quả hoặc làm gì đó khác
+          // setTimeout(() => {
+          //   this.$router.push('/');
+          // }, 2000);
+        })
+        .catch((err) => {
+          console.error('❌ Lỗi khi dừng session:', err);
+          this.$toast?.error?.('Lỗi khi dừng session: ' + (err.response?.data?.message || err.message));
+        });
+    },
+
+
+    loadAuctionRoom() {
+      axios
+        .get("http://localhost:8081/api/stream/room/" + this.roomID, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        })
+        .then((res) => {
+          this.detail_auction = res.data;
+          console.log('Room details loaded:', this.detail_auction);
+          // Load artwork nếu có sessionId trong detail_auction
+          if (res.data.sessionId) {
+            console.log('Session ID:', res.data.sessionId);
+            this.loadArtworkBySession('Artwork session loaded:', res.data.sessionId);
+          }
+        })
+        .catch((err) => {
+          console.error('Error loading room details:', err);
+          if (err.response?.status === 404) {
+            this.$toast?.error?.('Không tìm thấy phòng đấu giá');
+            this.$router?.push?.('/');
+          } else {
+            this.$toast?.error?.(err.response?.data?.message || 'Lỗi khi tải thông tin phòng');
+          }
+        });
+    },
+    loadArtworkBySession() {
+      axios
+        .get("http://localhost:8081/api/stream/room/" + this.roomID + "/sessions/current-or-next", {
+          headers: {
+            Authorization: 'Bearer ' + localStorage.getItem("token")
+          }
+        })
+        .then((res) => {
+          this.artworkSession = res.data;
+          console.log('📦 Artwork session loaded:', this.artworkSession);
+
+          // Khởi tạo countdown sau khi load session thành công
+          this.$nextTick(() => {
+            this.initializeCountdown();
+
+            // Subscribe to bids cho session này nếu WebSocket đã kết nối
+            if (this.auctionSocket && this.auctionSocket.connected && res.data.id) {
+              this.subscribeToSessionBids(res.data.id);
+            }
+          });
+        })
+        .catch((err) => {
+          console.error('Error loading artwork session:', err);
+          if (err.response?.status !== 404) {
+            this.$toast?.error?.(err.response?.data?.message || 'Lỗi khi tải thông tin artwork');
+          }
+        });
+    },
+
+    // === BID METHODS ===
+
+    // Đặt giá nhanh - Giá hiện tại + giá trị nút
+    setQuickBid(amount) {
+      const currentPrice = this.artworkSession.currentPrice || 0;
+      const newBidAmount = currentPrice + amount;
+      this.bidAmount = newBidAmount;
+      this.selectedQuickBid = amount; // Lưu nút được chọn để highlight
+
+      console.log(`🚀 Quick bid: ${this.formatUSD(currentPrice)} + ${this.formatUSD(amount)} = ${this.formatUSD(newBidAmount)}`);
+    },
+
+    datGia() {
+      if (this.isPlacingBid) return;
+
+      // Kiểm tra có nhập giá không
+      if (!this.bidAmount || this.bidAmount <= 0) {
+        this.$toast.error('Vui lòng nhập giá đấu giá hợp lệ!');
+        return;
+      }
+
+      // Kiểm tra có room ID không
+      if (!this.roomID) {
+        this.$toast.error('Chưa có phòng đấu giá. Vui lòng kiểm tra lại.');
+        return;
+      }
+
+      this.isPlacingBid = true;
+
+      axios
+        .post("http://localhost:8081/api/bids/" + this.roomID + "/place", {
+          amount: Number(this.bidAmount)
+        }, {
+          headers: {
+            Authorization: 'Bearer ' + localStorage.getItem("token")
+          }
+        })
+        .then((res) => {
+          if (res.data.result) {
+            console.log("Bid placed successfully", res.data);
+            this.$toast.success(res.data.message);
+            this.bidAmount = ''; // Reset giá sau khi đặt thành công
+            this.selectedQuickBid = null; // Reset nút được chọn
+
+            // Kéo dài countdown nếu còn dưới 2 phút
+            this.extendCountdown();
+          }
+          else {
+            this.$toast.error(res.data.message);
+          }
+
+        })
+        .catch((err) => {
+          console.error(err);
+          this.$toast.error('Lỗi đặt giá: ' + (err.response?.data?.message || err.message));
+        })
+        .finally(() => {
+          this.isPlacingBid = false;
+        });
+    },
+
+    // === ROOM STATUS CHECK ===
+    startRoomStatusCheck() {
+      // Check ngay lần đầu
+      this.checkRoomStatus();
+      this.refreshArtworkSession();
+
+      // Sau đó check theo thời gian đã config (có thể chỉnh trong data)
+      this.roomStatusInterval = setInterval(() => {
+        this.checkRoomStatus();
+        this.refreshArtworkSession();
+      }, this.refreshInterval); // Thời gian refresh được config trong data()
+    },
+
+    checkRoomStatus() {
+      // Không log để tránh spam console
+      axios
+        .get("http://localhost:8081/api/stream/room/" + this.roomID, {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        })
+        .then((res) => {
+          // Cập nhật detail_auction với data mới
+          this.detail_auction = res.data;
+
+          // Check status của phòng
+          if (res.data && res.data.status === 0) {
+            console.log('🔴 Phòng đã kết thúc (status = 0)');
+            // Clear interval để không check nữa
+            if (this.roomStatusInterval) {
+              clearInterval(this.roomStatusInterval);
+              this.roomStatusInterval = null;
+            }
+            // Hiển thị thông báo và redirect
+            this.$toast?.warning?.('Phòng đấu giá đã kết thúc. Đang chuyển về trang chủ...');
+            setTimeout(() => {
+              this.$router.push('/');
+            }, 2000); // Delay 2 giây để user đọc thông báo
+          }
+        })
+        .catch((err) => {
+          // Nếu API lỗi 404, phòng có thể đã bị xóa
+          if (err.response?.status === 404) {
+            console.log('🔴 Không tìm thấy phòng (404)');
+            // Clear interval
+            if (this.roomStatusInterval) {
+              clearInterval(this.roomStatusInterval);
+              this.roomStatusInterval = null;
+            }
+            // Redirect về home
+            this.$toast?.error?.('Không tìm thấy phòng đấu giá. Đang chuyển về trang chủ...');
+            setTimeout(() => {
+              this.$router.push('/');
+            }, 2000);
+          }
+          // Các lỗi khác không làm gì (có thể là lỗi mạng tạm thời)
+        });
+    },
+
+    refreshArtworkSession() {
+      // Load lại artwork session mỗi 2 giây để cập nhật currentPrice và winnerId
+      axios
+        .get("http://localhost:8081/api/stream/room/" + this.roomID + "/sessions/current-or-next")
+        .then((res) => {
+          // Cập nhật dữ liệu mới
+          this.artworkSession = res.data;
+
+          console.log('🔄 Data refreshed - Current Price:', this.formatUSD(res.data.currentPrice), '- Winner:', res.data.winnerId);
+        })
+        .catch((err) => {
+          // Không log lỗi 404 vì có thể chưa có session
+          if (err.response?.status !== 404) {
+            console.error('Error refreshing artwork session:', err);
+          }
+        });
+    },
+
+
+
+    //livestream
+    copyInvite() {
+      if (!this.inviteLink) return;
+      navigator.clipboard?.writeText(this.inviteLink);
+    },
+
+    async startLiveStream() {
+      const user = this.$page?.props?.auth?.user ?? null;
+      const userName = user?.name ?? `Guest-${Math.floor(Math.random() * 100000)}`;
+      const userID = String(user?.id ?? `g${Date.now()}`);
+
+      let appID = this.$page?.props?.chatRoom?.appID;
+      let serverSecret = this.$page?.props?.chatRoom?.serverSecret;
+      let zegoRole = "audience"; // Default role
+
+      // Fallback: fetch from backend REST API if props are missing
+      if (!appID || !serverSecret) {
+        try {
+          const res = await axios.get(`http://localhost:8081/api/stream/token`, {
+            params: { roomId: this.roomID },
+            headers: {
+              Authorization: "Bearer " + localStorage.getItem("token"),
+            },
+          });
+          appID = res.data?.appID;
+          serverSecret = res.data?.token; // Use token as serverSecret for generateKitTokenForTest
+          zegoRole = res.data?.role || "audience"; // Get role from API response
+        } catch (e) {
+          console.error('Fetch credentials failed', e);
+        }
+      }
+
+      if (!appID || !serverSecret) {
+        this.error = "Thiếu Zego appID/serverSecret từ backend. Vui lòng cấu hình .env hoặc VITE_API_URL.";
+        return;
+      }
+
+      const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+        appID,
+        serverSecret,
+        this.roomID,
+        userID,
+        userName
+      );
+
+      // Client luôn là Audience - chỉ xem livestream
+      const role = ZegoUIKitPrebuilt.Audience;
+
+      // Cấu hình cho Client (Audience) - chỉ xem, không livestream
+      let config = {
+        showPreJoinView: false,
+        turnOnCameraWhenJoining: false, // Client không bật camera
+        showMyCameraToggleButton: false, // Client không thể tắt/bật camera
+        showAudioVideoSettingsButton: false, // Client không thể cài đặt audio/video
+        showScreenSharingButton: false, // Client không thể share screen
+        showTextChat: false, // ẩn chat của Zego (dùng chat riêng)
+        showUserList: false, // Client không xem được danh sách user
+        showLeaveButton: true, // Client có thể leave
+        showTurnOnRemoteCameraButton: false, // Client không thể bật camera cho user khác
+        showTurnOnRemoteMicrophoneButton: false, // Client không thể bật mic cho user khác
+        showRemoveUserButton: false, // Client không thể remove user
+
+        videoResolutionList: [
+          ZegoUIKitPrebuilt.VideoResolution_360P,
+          ZegoUIKitPrebuilt.VideoResolution_180P,
+          ZegoUIKitPrebuilt.VideoResolution_480P,
+          ZegoUIKitPrebuilt.VideoResolution_720P,
+        ],
+        videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_720P, // Client dùng chất lượng thấp hơn
+      };
+
+
+      const zp = ZegoUIKitPrebuilt.create(kitToken);
+      zp.joinRoom({
+        container: this.$refs.chatRoomElement,
+        scenario: {
+          mode: ZegoUIKitPrebuilt.LiveStreaming,
+          config: {
+            role,
+          }
+        },
+        sharedLinks: [
+          {
+            name: 'Join as Audience',
+            url: window.location.origin + "/client/auction-room/" + this.roomID + "?role=Audience",
+          }],
+        ...config,
+      });
+
+      this.inviteLink = window.location.origin + "/client/auction-room/" + this.roomID + "?role=Audience";
+
+      // this.loading = true;
+      // setTimeout(() => {
+      //     this.initLiveStream();
+      //     this.loading = false;
+      // }, 3000);
+    },
+
+
+
+
+
+    // === INITIALIZATION ===
+    initializeUser() {
+      // Lấy roomId từ params nếu có
+      if (this.$route && this.$route.params && this.$route.params.id) {
+        this.roomId = this.$route.params.id;
+      }
+
+      // Extract user info từ JWT và localStorage
+      const info = this.extractUserInfoFromToken();
+      this.currentUserId = info.id;
+      this.currentUserEmail = info.email;
+      this.currentUsername = info.username;
+      this.isAdmin = this.checkIfAdmin(info);
+    },
+
+    // === MESSAGE LOADING ===
+    async loadHistory() {
+      try {
+        const res = await axios.get(
+          `http://localhost:8081/api/chats/rooms/${this.roomId}/messages`,
+          {
+            headers: {
+              Authorization: "Bearer " + localStorage.getItem("token"),
+            },
+          }
+        );
+
+        let list = this.extractListFromResponse(res.data);
+        list = this.sortMessages(list);
+
+        // Lọc tin nhắn theo role: Admin xem tất cả, User chỉ xem thread với admin
+        const filtered = this.isAdmin ? list : this.filterMessagesForUser(list);
+
+        this.messages = filtered.map((m) => this.normalizeMessage(m));
+        this.saveToCache();
+        this.$nextTick(() => this.scrollToBottom());
+      } catch (e) {
+        console.error("Load history error:", e);
+      }
+    },
+
+    // === SOCKET CONNECTION ===
+    connectSocket() {
+      this.socket = new ChatSocket("http://localhost:8081", localStorage.getItem('token'));
+      this.socket.connect(() => {
+        this.connected = true;
+        this.subscription = this.socket.subscribeRoom(this.roomId, (body) => {
+          // Với user: chỉ nhận thread của mình với admin
+          if (!this.isAdmin && !this.shouldShowMessage(body)) return;
+
+          this.messages.push(this.normalizeIncoming(body));
+          this.saveToCache();
+          this.$nextTick(() => this.scrollToBottom());
+        });
+      }, (err) => {
+        console.error('STOMP error:', err);
+      });
+    },
+
+    // === AUCTION WEBSOCKET FOR COUNTDOWN ===
+    connectAuctionWebSocket() {
+      console.log('🔌 Connecting to auction WebSocket for countdown...');
+      this.auctionSocket = new ChatSocket("http://localhost:8081", localStorage.getItem('token'));
+
+      this.auctionSocket.connect(() => {
+        console.log('✅ Auction WebSocket connected');
+
+        // Subscribe to auction room events
+        this.auctionRoomSubscription = this.auctionSocket.subscribeAuctionRoom(this.roomID, (message) => {
+          this.handleAuctionRoomEvent(message);
+        });
+
+        // Load current session để lấy countdown ban đầu
+        this.loadCurrentSessionForCountdown();
+      }, (err) => {
+        console.error('❌ Auction WebSocket error:', err);
+      });
+    },
+
+    disconnectAuctionWebSocket() {
+      if (this.auctionRoomSubscription) {
+        this.auctionRoomSubscription.unsubscribe();
+        this.auctionRoomSubscription = null;
+      }
+      if (this.auctionBidsSubscription) {
+        this.auctionBidsSubscription.unsubscribe();
+        this.auctionBidsSubscription = null;
+      }
+      if (this.auctionSocket) {
+        this.auctionSocket.deactivate();
+        this.auctionSocket = null;
+      }
+    },
+
+    handleAuctionRoomEvent(message) {
+      console.log('📨 Auction room event received:', message);
+
+      if (message.eventType === 'SESSION_STARTED') {
+        console.log('✅ Session started:', message);
+
+        // Cập nhật artworkSession
+        if (message.sessionId) {
+          this.loadArtworkBySession();
+        }
+
+        // Cập nhật countdown từ endTime
+        if (message.endTime) {
+          this.sessionEndTime = new Date(message.endTime);
+          this.updateCountdownFromEndTime();
+          this.startCountdownInterval();
+        }
+
+        // Subscribe to bids for this session
+        if (message.sessionId) {
+          this.subscribeToSessionBids(message.sessionId);
+        }
+      } else if (message.eventType === 'SESSION_ENDED') {
+        console.log('⏰ Session ended:', message);
+        this.stopCountdownInterval();
+        this.countdownSeconds = 0;
+        this.sessionEndTime = null;
+
+        // Unsubscribe from bids
+        if (this.auctionBidsSubscription) {
+          this.auctionBidsSubscription.unsubscribe();
+          this.auctionBidsSubscription = null;
+        }
+
+        // Load session tiếp theo nếu có
+        this.$nextTick(() => {
+          this.loadArtworkBySession();
+        });
+      }
+    },
+
+    subscribeToSessionBids(sessionId) {
+      // Unsubscribe old subscription if exists
+      if (this.auctionBidsSubscription) {
+        this.auctionBidsSubscription.unsubscribe();
+      }
+
+      // Subscribe to new session bids
+      this.auctionBidsSubscription = this.auctionSocket.subscribeAuctionBids(sessionId, (message) => {
+        this.handleBidEvent(message);
+      });
+    },
+
+    handleBidEvent(message) {
+      console.log('💰 Bid event received:', message);
+
+      if (message.eventType === 'BID_ACCEPTED') {
+        // Cập nhật countdown từ remainingSeconds hoặc endTime
+        if (message.remainingSeconds !== undefined) {
+          this.countdownSeconds = message.remainingSeconds;
+          // Cập nhật sessionEndTime từ remainingSeconds
+          const now = new Date();
+          this.sessionEndTime = new Date(now.getTime() + (message.remainingSeconds * 1000));
+        } else if (message.endTime) {
+          this.sessionEndTime = new Date(message.endTime);
+          this.updateCountdownFromEndTime();
+        }
+
+        // Cập nhật currentPrice nếu có
+        if (message.price !== undefined && this.artworkSession) {
+          this.artworkSession.currentPrice = message.price;
+        }
+
+        // Cập nhật leader nếu có
+        if (message.leader && this.artworkSession) {
+          this.artworkSession.winnerId = message.leader;
+        }
+
+        // Hiển thị thông báo nếu được gia hạn
+        if (message.extended) {
+          this.$toast?.info?.('⏱️ Thời gian đã được gia hạn thêm 120 giây!');
+        }
+      }
+    },
+
+    loadCurrentSessionForCountdown() {
+      axios
+        .get(`http://localhost:8081/api/stream/room/${this.roomID}/sessions/current-or-next`, {
+          headers: {
+            Authorization: 'Bearer ' + localStorage.getItem("token")
+          }
+        })
+        .then((res) => {
+          if (res.data && res.data.status === 1) {
+            // Session đang LIVE
+            // Cập nhật countdown từ endedAt
+            if (res.data.endedAt) {
+              this.sessionEndTime = new Date(res.data.endedAt);
+              this.updateCountdownFromEndTime();
+              this.startCountdownInterval();
+            }
+
+            // Subscribe to bids cho session này
+            if (res.data.id) {
+              this.subscribeToSessionBids(res.data.id);
+            }
+          }
+        })
+        .catch((err) => {
+          if (err.response?.status !== 404) {
+            console.error('Error loading current session for countdown:', err);
+          }
+        });
+    },
+
+    // === MESSAGE SENDING ===
+
+    // --- Gửi tin ---
+    sendMsg() {
+      if (!this.text.trim() || !this.connected) return;
+
+      let payload;
+      if (this.isAdmin) {
+        // Admin có thể gửi cho tất cả hoặc user cụ thể
+        payload = {
+          content: this.text,
+          type: "SUPPORT",
+          receiverId: this.selectedUserId || null, // null = broadcast đến tất cả
+          auctionId: this.roomId
+        };
+      } else {
+        // User gửi cho admin
+        payload = {
+          content: this.text,
+          type: "SUPPORT",
+          receiverId: this.adminId, // gửi trực tiếp tới admin
+          auctionId: this.roomId
+        };
+      }
+
+      this.socket && this.socket.sendRoom(this.roomId, payload);
+      this.text = "";
+      this.$nextTick(() => this.scrollToBottom());
+    },
+
+    // === HELPER METHODS ===
+
+    // Sắp xếp tin nhắn theo thời gian (cũ -> mới)
+    sortMessages(list) {
+      const canCompare = list.some((m) => this.getComparableValue(m) != null);
+      if (canCompare) {
+        return list.slice().sort((a, b) => {
+          const va = this.getComparableValue(a) ?? Number.NEGATIVE_INFINITY;
+          const vb = this.getComparableValue(b) ?? Number.NEGATIVE_INFINITY;
+          return va < vb ? -1 : 1; // cũ -> mới
+        });
+      }
+      return list.slice().reverse(); // API trả newest-first
+    },
+
+    // Lọc tin nhắn cho user (chỉ xem thread với admin)
+    filterMessagesForUser(list) {
+      return list.filter((m) => {
+        const sId = this.extractSenderId(m);
+        const rId = this.extractReceiverId(m);
+
+        const isSenderAdmin = this.isAdminUser(sId);
+        const isReceiverAdmin = this.isAdminUser(rId);
+
+        // User -> Admin (direct)
+        const userToAdmin = String(sId) === String(this.currentUserId) && isReceiverAdmin;
+        // Admin -> User (direct reply)
+        const adminToUser = isSenderAdmin && String(rId) === String(this.currentUserId);
+        // Admin broadcast (receiverId = null)
+        const adminBroadcast = isSenderAdmin && (rId == null || rId === '');
+
+        return userToAdmin || adminToUser || adminBroadcast;
+      });
+    },
+
+    // Kiểm tra tin nhắn có nên hiển thị cho user không (cho socket)
+    shouldShowMessage(message) {
+      const sId = this.extractSenderId(message);
+      const rId = this.extractReceiverId(message);
+
+      const isSenderAdmin = this.isAdminUser(sId);
+      const isReceiverAdmin = this.isAdminUser(rId);
+
+      const userToAdmin = String(sId) === String(this.currentUserId) && isReceiverAdmin;
+      const adminToUser = isSenderAdmin && String(rId) === String(this.currentUserId);
+      const adminBroadcast = isSenderAdmin && (rId == null || rId === '');
+
+      return userToAdmin || adminToUser || adminBroadcast;
+    },
+
+    // Extract sender ID từ message object
+    extractSenderId(m) {
+      return m.senderId || m.sender_id || (m.sender && (m.sender.id || m.sender.userId || m.sender.user_id)) || m.userId || m.user_id || null;
+    },
+
+    // Extract receiver ID từ message object
+    extractReceiverId(m) {
+      return m.receiverId || m.receiver_id || (m.receiver && (m.receiver.id || m.receiver.userId || m.receiver.user_id)) || null;
+    },
+
+    // Kiểm tra user có phải admin không (by ID hoặc email)
+    isAdminUser(userId) {
+      return String(userId) === String(this.adminId) || userId === this.adminEmail;
+    },
+
+    // === USER MANAGEMENT ===
+    extractUserIdFromToken() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return null;
+        const parts = token.split(".");
+        if (parts.length < 2) return null;
+        const payloadJson = JSON.parse(decodeURIComponent(escape(window.atob(parts[1]))));
+        return (
+          payloadJson.userId ||
+          payloadJson.id ||
+          payloadJson._id ||
+          payloadJson.sub ||
+          null
+        );
+      } catch (e) {
+        return null;
+      }
+    },
+
+    // Trích xuất đầy đủ info từ JWT
+    extractUserInfoFromToken() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return { id: null, email: null, username: null, role: null };
+        const parts = token.split(".");
+        if (parts.length < 2) return { id: null, email: null, username: null, role: null };
+        const p = JSON.parse(decodeURIComponent(escape(window.atob(parts[1]))));
+        return {
+          id: p.userId || p.id || p._id || p.sub || null,
+          email: p.email || null,
+          username: p.username || p.name || null,
+          role: p.role ?? null,
+        };
+      } catch (_) {
+        return { id: null, email: null, username: null, role: null };
+      }
+    },
+
+    // Kiểm tra user hiện tại có phải admin không
+    checkIfAdmin(info) {
+      try {
+        // Check localStorage trước (có thể admin được set ở đây)
+        const localEmail = localStorage.getItem('email_kh');
+        const localName = localStorage.getItem('name_kh');
+        const byLocalEmail = localEmail === this.adminEmail;
+        const byLocalName = localName === this.adminUsername;
+
+        // Check JWT token
+        const tokenUserId = info && (info.id);
+        const byRole = info && info.role === 1;
+        const byId = tokenUserId && String(tokenUserId) === String(this.adminId);
+        const byUsername = info && info.username === this.adminUsername;
+        const byEmail = info && info.email === this.adminEmail;
+
+        return Boolean(byLocalEmail || byLocalName || byRole || byId || byUsername || byEmail);
+      } catch (e) {
+        return false;
+      }
+    },
+
+    // --- Cuộn về cuối khung chat ---
+    scrollToBottom() {
+      const el = this.$refs.chatMessages;
+      if (el) {
+        setTimeout(() => {
+          el.scrollTop = el.scrollHeight;
+        }, 100);
+      }
+    },
+
+    // --- Cache message theo phòng trong sessionStorage ---
+    saveToCache() {
+      try {
+        const key = `chat:${this.roomId}`;
+        sessionStorage.setItem(key, JSON.stringify(this.messages));
+      } catch (_) { }
+    },
+    loadFromCache() {
+      try {
+        const key = `chat:${this.roomId}`;
+        const raw = sessionStorage.getItem(key);
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (Array.isArray(cached)) {
+            this.messages = cached;
+          }
+        }
+      } catch (_) { }
+    },
+
+    // Chuẩn hoá dữ liệu tin nhắn từ API
+    normalizeMessage(m) {
+      const senderId = m.senderId || m.sender_id || (m.sender && (m.sender.id || m.sender.userId || m.sender.user_id)) || m.userId || m.user_id || null;
+      const receiverId = m.receiverId || m.receiver_id || (m.receiver && (m.receiver.id || m.receiver.userId || m.receiver.user_id)) || null;
+      const text = m.content ?? m.message ?? m.text ?? '';
+      const senderNameRaw = m.senderName || m.sender_name || (m.sender && (m.sender.name || m.sender.username)) || null;
+      const senderEmail = m.senderEmail || m.sender_email || (m.sender && m.sender.email) || null;
+
+      let senderName;
+      if (String(senderId) === String(this.adminId) || senderId === this.adminEmail) {
+        senderName = 'john_sins'; // tên admin theo dữ liệu test
+      } else if (senderNameRaw) {
+        senderName = senderNameRaw;
+      } else if (senderEmail) {
+        // Hiển thị email thay vì senderId
+        senderName = senderEmail;
+      } else {
+        // Fallback về senderId nếu không có email
+        senderName = senderId || 'Unknown';
+      }
+
+      const senderRole = m.senderRole || m.sender_role || (m.sender && m.sender.role) || null;
+      const time = this.formatTime(m.sentAt || m.createdAt || m.created_at || m.timestamp);
+
+      // Xác định role và tên hiển thị
+      let displayName = senderName || 'Unknown';
+      let role = 'user';
+
+      if (senderRole === 1) {
+        role = 'admin';
+      } else {
+        role = 'user';
+      }
+
+      return {
+        text,
+        mine: senderId != null && this.currentUserId != null ? String(senderId) === String(this.currentUserId) : false,
+        senderName: `${displayName} (${role})`,
+        time: time,
+        senderId: senderId,
+        receiverId: receiverId
+      };
+    },
+    // --- Chuẩn hoá tin từ socket ---
+    normalizeIncoming(body) {
+      return this.normalizeMessage(body);
+    },
+    // --- Lấy mảng tin nhắn từ response ---
+    extractListFromResponse(data) {
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.result)) return data.result;
+      if (data && data.page && Array.isArray(data.page.content)) return data.page.content;
+      return [];
+    },
+    // --- Giá trị so sánh (thời gian hoặc id) ---
+    getComparableValue(m) {
+      const tRaw = m.createdAt || m.created_at || m.timestamp || m.createdDate || m.created_date || null;
+      const t = tRaw ? Date.parse(tRaw) : NaN;
+      if (!Number.isNaN(t)) return t;
+      const idRaw = m.id || m.messageId || m.message_id || null;
+      const idNum = idRaw != null && !Number.isNaN(Number(idRaw)) ? Number(idRaw) : NaN;
+      if (!Number.isNaN(idNum)) return idNum;
+      return null;
+    },
+
+    // Format thời gian
+    formatTime(timestamp) {
+      if (!timestamp) return '';
+      try {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false // 24h format như Zalo
+        });
+      } catch (e) {
+        return '';
+      }
+    },
+
+    // Lấy tên user từ ID
+    getUserName(userId) {
+      const user = this.uniqueUsers.find(u => u.id === userId);
+      return user ? user.name : 'Unknown';
+    },
+
+    // Reply to user (từ Reply button)
+    replyToUser(userId) {
+      this.selectedUserId = userId;
+      // Auto-focus vào input để admin có thể gõ ngay
+      this.$nextTick(() => {
+        const input = this.$el.querySelector('.chat-input input');
+        if (input) input.focus();
+      });
+    },
+
+
+
+  },
+
+  computed: {
+    // Lấy danh sách user duy nhất từ messages
+    uniqueUsers() {
+      const users = new Map();
+      this.messages.forEach(msg => {
+        if (msg.senderId && msg.senderId !== this.currentUserId && msg.senderId !== this.adminId && msg.senderId !== this.adminEmail) {
+          const role = msg.senderId === this.adminId || msg.senderId === this.adminEmail ? "admin" : "user";
+          const name = msg.senderName ? msg.senderName.split(' (')[0] : msg.senderId; // Dùng senderId (email) làm tên
+          users.set(msg.senderId, {
+            id: msg.senderId,
+            name: name,
+            role: role
+          });
+        }
+      });
+      return Array.from(users.values());
+    },
+
+    // Hiển thị countdown dạng MM:SS
+    countdownDisplay() {
+      if (this.countdownSeconds <= 0) return '0:00';
+      const minutes = Math.floor(this.countdownSeconds / 60);
+      const seconds = this.countdownSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    },
+
+    // Tính toán các nút đặt giá nhanh dựa trên bước giá
+    quickBidButtons() {
+      const bidStep = this.artworkSession.bidStep || 100; // Mặc định 100 nếu không có bidStep
+      return [
+        bidStep * 1,
+        bidStep * 2,
+        bidStep * 3,
+        bidStep * 4,
+        bidStep * 5,
+        bidStep * 6
+      ];
+    }
+  },
+
+}
+</script>
+<style scoped>
+/* Tabs Wrapper */
+.tabs-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+  height: 100%;
+  min-height: 600px;
+}
+
+/* Content Box */
+.content-box {
+  border: none;
+  background-color: #fff;
+  padding: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Tabs Sidebar */
+.tabs-sidebar {
+  /* background-color: #ffffff; */
+  padding: 15px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* min-width: 65px; */
+  /* border-left: 2px solid #e0e0e0; */
+}
+
+/* Vertical Tabs Styling */
+.nav-tabs.flex-column {
+  border-bottom: none;
+  border-left: none;
+  padding-left: 0;
+  gap: 15px;
+  background-color: transparent;
+}
+
+.nav-tabs.flex-column .nav-item {
+  width: auto;
+}
+
+.nav-tabs.flex-column .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 600;
+  padding: 0;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  border-radius: 10px;
+  background-color: transparent;
+  position: relative;
+  opacity: 0.4;
+}
+
+.nav-tabs.flex-column .nav-link:hover {
+  opacity: 0.7;
+  transform: scale(1.1);
+}
+
+.nav-tabs.flex-column .nav-link.active {
+  color: #044a42;
+  background-color: transparent;
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.nav-tabs.flex-column .nav-link i {
+  font-size: 22px;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s ease-in-out;
+  height: 100%;
+}
+
+.tab-pane {
+  height: 100%;
+}
+
+.chat-tab-pane {
+  height: 100%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Chat Bubbles */
+.chat-bubble-left {
+  background: #ffffff;
+  border-radius: 12px 12px 12px 4px;
+  padding: 10px 14px;
+  max-width: 70%;
+  display: inline-block;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.chat-bubble-right {
+  background: linear-gradient(135deg, #044a42 0%, #066a5e 100%);
+  color: white;
+  border-radius: 12px 12px 4px 12px;
+  padding: 10px 14px;
+  max-width: 70%;
+  display: inline-block;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(4, 74, 66, 0.2);
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* Avatar Circle */
+.avatar-circle {
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Chat Content Container */
+.chat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar Styling */
+.chat-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.chat-content::-webkit-scrollbar-thumb {
+  background: #044a42;
+  border-radius: 10px;
+}
+
+.chat-content::-webkit-scrollbar-thumb:hover {
+  background: #033831;
+}
+
+/* Smooth scroll behavior */
+.chat-content {
+  scroll-behavior: smooth;
+}
+
+/* Admin Controls */
+.admin-controls {
+  border: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+/* Input Styling */
+/* .form-control:focus {
+  box-shadow: none;
+  border-color: #044a42;
+} */
+
+/* Card Header Badge */
+.card-header .badge {
+  font-weight: 500;
+}
+
+/* Message animations handled by global fadeIn */
+
+/* Quick Bid Buttons */
+.quick-bid-btn {
+  cursor: pointer;
+  border: 2px solid transparent !important;
+  box-sizing: border-box;
+}
+
+.quick-bid-btn:hover {
+  border-color: #044a42;
+}
+
+.quick-bid-btn:active {
+  box-sizing: border-box;
+}
+
+.quick-bid-btn .card-body {
+  font-weight: 600;
+  color: #044a42;
+}
+
+.quick-bid-btn:hover .card-body p {
+  color: #066a5e;
+}
+
+/* Quick Bid Active State */
+.quick-bid-active {
+  border: 2px solid #044a42 !important;
+  background-color: rgba(4, 74, 66, 0.05);
+}
+
+.quick-bid-active .card-body p {
+  color: #044a42;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+  .chat-bubble-left,
+  .chat-bubble-right {
+    max-width: 85%;
+  }
+
+  .chat-content {
+    height: 300px !important;
+  }
+}
+</style>
